@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Provider Match</title>
+    <script>
+      const fetchMatch = async () => {
+        const response = await fetch("/get-provider-match");
+        const match = await response.json();
+        if (response.ok) {
+          document.getElementById("match-info").innerText = JSON.stringify(
+            match,
+            null,
+            2
+          );
+        } else {
+          document.getElementById("match-info").innerText = match.message;
+        }
+      };
+
+      window.onload = fetchMatch;
+    </script>
+  </head>
+  <body>
+    <header>
+      <h2>Matched Provider</h2>
+    </header>
+    <main>
+      <pre id="match-info"></pre>
+    </main>
+  </body>
+</html>
