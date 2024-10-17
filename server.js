@@ -30,7 +30,9 @@ const carpoolSchema = new mongoose.Schema({
   userName: { type: String, required: true },
   contactNo: { type: String, required: true },
   source: { type: Object, required: true }, // Store coordinates as an object
+  sourceAddress: { type: String, required: true },
   destination: { type: Object, required: true },
+  destinationAddress: { type: String, required: true },
   vehicleType: { type: String, required: true },
   userType: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
@@ -40,14 +42,24 @@ const Carpool = mongoose.model("Carpool", carpoolSchema);
 
 // Routes
 app.post("/find-ride", async (req, res) => {
-  const { source, destination, vehicleType, userName, contactNo } = req.body;
+  const {
+    source,
+    sourceAddress,
+    destination,
+    destinationAddress,
+    vehicleType,
+    userName,
+    contactNo,
+  } = req.body;
 
   try {
     const newRequest = new Carpool({
       userName,
       contactNo,
       source,
+      sourceAddress,
       destination,
+      destinationAddress,
       vehicleType,
       userType: "serviceTaker",
     });
@@ -55,21 +67,36 @@ app.post("/find-ride", async (req, res) => {
     const matchedProvider = await matchRide(newRequest);
 
     if (matchedProvider) {
+      const distance = haversineDistance(source, destination);
+      const co2EmissionReduced = calculateCO2EmissionReduced(
+        distance,
+        vehicleType
+      );
+      const costTaken = calculateCost(distance, vehicleType);
+
       providerMatch = {
         userName: matchedProvider.userName,
         contactNo: matchedProvider.contactNo,
         source: matchedProvider.source,
+        sourceAddress: matchedProvider.sourceAddress,
         destination: matchedProvider.destination,
+        destinationAddress: matchedProvider.destinationAddress,
         vehicleType: matchedProvider.vehicleType,
         timestamp: matchedProvider.timestamp,
+        co2EmissionReduced,
+        costTaken,
       };
 
       takerMatch = {
         userName,
         contactNo,
         source,
+        sourceAddress,
         destination,
+        destinationAddress,
         vehicleType,
+        co2EmissionReduced,
+        costTaken,
       };
 
       res.status(200).send({ message: "Match found!" });
@@ -85,10 +112,26 @@ app.post("/find-ride", async (req, res) => {
 });
 
 app.post("/provide-service", async (req, res) => {
-  const { source, destination, vehicleType, userName, contactNo } = req.body;
+  const {
+    source,
+    sourceAddress,
+    destination,
+    destinationAddress,
+    vehicleType,
+    userName,
+    contactNo,
+  } = req.body;
 
   // Validate input
-  if (!source || !destination || !vehicleType || !userName || !contactNo) {
+  if (
+    !source ||
+    !destination ||
+    !vehicleType ||
+    !userName ||
+    !contactNo ||
+    !sourceAddress ||
+    !destinationAddress
+  ) {
     return res.status(400).send({ error: "All fields are required." });
   }
 
@@ -97,7 +140,9 @@ app.post("/provide-service", async (req, res) => {
       userName,
       contactNo,
       source,
+      sourceAddress,
       destination,
+      destinationAddress,
       vehicleType,
       userType: "serviceProvider",
     });
@@ -125,6 +170,26 @@ const haversineDistance = (coords1, coords2) => {
   return distance;
 };
 
+// CO2 Emission calculation
+const calculateCO2EmissionReduced = (distance, vehicleType) => {
+  const co2PerKm = {
+    bike: 0.08, // kg CO2 per km
+    car: 0.12,
+    sedan: 0.18,
+  };
+  return co2PerKm[vehicleType] * distance;
+};
+
+// Cost calculation based on distance and vehicle type
+const calculateCost = (distance, vehicleType) => {
+  const costPerKm = {
+    bike: 2, // ₹ per km
+    car: 5,
+    sedan: 8,
+  };
+  return costPerKm[vehicleType] * distance;
+};
+
 // Matching logic
 const minutesToMilliseconds = (minutes) => minutes * 60 * 1000;
 
@@ -140,7 +205,14 @@ const matchRide = async (serviceTaker) => {
     // Filter providers based on distance
     const matchedProvider = providers.find((provider) => {
       const distance = haversineDistance(serviceTaker.source, provider.source);
-      return distance <= 5 && provider.vehicleType === serviceTaker.vehicleType; // Check if within 5 km and vehicle type matches
+      const isSameDestination =
+        provider.destination.lat === serviceTaker.destination.lat &&
+        provider.destination.lng === serviceTaker.destination.lng;
+      return (
+        distance <= 5 &&
+        provider.vehicleType === serviceTaker.vehicleType &&
+        isSameDestination
+      ); // Check if within 5 km and vehicle type matches
     });
 
     return matchedProvider;

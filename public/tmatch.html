@@ -14,8 +14,18 @@
             null,
             2
           );
+          document.getElementById(
+            "cost"
+          ).innerText = `Cost Taken: ₹${match.costTaken}`;
+          document.getElementById(
+            "emission"
+          ).innerText = `CO2 Emission Reduced: ${match.co2EmissionReduced.toFixed(
+            2
+          )} kg`;
         } else {
           document.getElementById("match-info").innerText = match.message;
+          document.getElementById("cost").innerText = "";
+          document.getElementById("emission").innerText = "";
         }
       };
 
@@ -28,6 +38,8 @@
     </header>
     <main>
       <pre id="match-info"></pre>
+      <p id="cost"></p>
+      <p id="emission"></p>
     </main>
   </body>
 </html>

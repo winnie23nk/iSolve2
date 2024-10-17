@@ -44,7 +44,9 @@
               userName,
               contactNo,
               source: sourceCoords,
+              sourceAddress: source,
               destination: destinationCoords,
+              destinationAddress: destination,
               vehicleType,
             }),
           });
@@ -80,7 +82,7 @@
         <br />
         <label for="vehicleType">Vehicle Type:</label>
         <select name="vehicleType" required>
-          <option value="normal">Normal</option>
+          <option value="car">Car</option>
           <option value="sedan">Sedan</option>
           <option value="bike">Bike</option>
         </select>
